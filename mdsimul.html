@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>멘델리예프 다이스 시뮬레이터</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #0f172a; /* bg-slate-900 */
+            background-image: linear-gradient(to bottom right, #111827, #1e293b);
+        }
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+        .header-glow {
+            text-shadow: 0 0 8px rgba(96, 165, 250, 0.6), 0 0 20px rgba(59, 130, 246, 0.4);
+        }
+        /* 커스텀 체크박스 스타일 */
+        .dice-checkbox:checked + label {
+            background-color: #3b82f6; /* bg-blue-600 */
+            border-color: #60a5fa; /* border-blue-400 */
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+        .dice-checkbox:checked + label .dice-icon {
+            transform: scale(1.1) rotate(15deg);
+        }
+        /* 커스텀 토글 스위치 스타일 */
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #3b82f6; /* bg-blue-600 */
+        }
+        .toggle-checkbox:checked + .toggle-label .toggle-ball {
+            transform: translateX(100%);
+        }
+        /* 스크롤바 스타일 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937; /* bg-gray-800 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563; /* bg-gray-600 */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* bg-gray-500 */
+        }
+    </style>
+</head>
+<body class="text-white antialiased">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+        
+        <!-- 헤더 -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold font-orbitron tracking-wider header-glow">
+                <span class="text-blue-400">Mendeleev</span> Dice
+            </h1>
+            <p class="text-gray-400 mt-2">보드게임으로 배우는 화학</p>
+        </header>
+
+        <!-- 컨트롤 패널 -->
+        <div class="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 mb-8 shadow-xl shadow-blue-900/10 border border-gray-700">
+            <h2 class="text-xl font-bold mb-4 border-b border-gray-700 pb-2">🎲 주사위 선택</h2>
+            <div id="dice-selector" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-4 mb-6">
+                <!-- 주사위 버튼은 JS로 생성됩니다 -->
+            </div>
+
+            <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+                <!-- 토글 그룹 -->
+                <div class="flex flex-wrap justify-center gap-x-6 gap-y-4">
+                    <div class="flex items-center space-x-3">
+                        <input type="checkbox" id="operator-toggle" class="toggle-checkbox hidden">
+                        <label for="operator-toggle" class="toggle-label flex items-center cursor-pointer w-14 h-8 bg-gray-700 rounded-full p-1 transition-colors duration-300 ease-in-out">
+                            <div class="toggle-ball w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out"></div>
+                        </label>
+                        <span class="font-semibold text-lg">×, ÷ 포함</span>
+                    </div>
+                     <div class="flex items-center space-x-3">
+                        <input type="checkbox" id="combo-toggle" class="toggle-checkbox hidden">
+                        <label for="combo-toggle" class="toggle-label flex items-center cursor-pointer w-14 h-8 bg-gray-700 rounded-full p-1 transition-colors duration-300 ease-in-out">
+                            <div class="toggle-ball w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ease-in-out"></div>
+                        </label>
+                        <span class="font-semibold text-lg">3개 조합 계산</span>
+                    </div>
+                </div>
+                <!-- 굴리기 버튼 -->
+                <button id="roll-button" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 transition-all duration-300 ease-in-out text-white font-bold py-3 px-10 rounded-lg text-xl shadow-lg hover:shadow-blue-500/50 transform hover:scale-105">
+                    Roll Dice!
+                </button>
+            </div>
+        </div>
+
+        <!-- 결과 표시 영역 -->
+        <div id="results-area" class="space-y-8">
+            <!-- 주사위 굴림 결과 -->
+            <div id="dice-roll-results-container" class="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 shadow-xl shadow-blue-900/10 border border-gray-700 min-h-[120px]">
+                <h2 class="text-xl font-bold mb-4 border-b border-gray-700 pb-2">🎯 주사위 결과</h2>
+                <div id="dice-roll-results" class="flex flex-wrap gap-4 justify-center items-center">
+                    <p class="text-gray-400">주사위를 선택하고 'Roll Dice!' 버튼을 누르세요.</p>
+                </div>
+            </div>
+
+            <!-- 계산 결과 -->
+            <div id="calculation-results-container" class="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 shadow-xl shadow-blue-900/10 border border-gray-700">
+                <h2 class="text-xl font-bold mb-4 border-b border-gray-700 pb-2">🔬 계산 결과</h2>
+                <div id="calculation-info"></div>
+                <div id="calculation-results-wrapper" class="max-h-[400px] overflow-y-auto pr-2">
+                    <table id="calculation-results-table" class="w-full text-left">
+                        <thead>
+                            <tr class="border-b border-gray-600">
+                                <th class="p-2">계산식</th>
+                                <th class="p-2 text-center">결과</th>
+                                <th class="p-2 text-center">원소기호</th>
+                                <th class="p-2">원소이름</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="4" class="text-center p-8 text-gray-400">결과를 기다리는 중...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 원소 데이터 (1-118)
+            const ELEMENTS = [
+                { number: 1, symbol: 'H', name: '수소' }, { number: 2, symbol: 'He', name: '헬륨' },
+                { number: 3, symbol: 'Li', name: '리튬' }, { number: 4, symbol: 'Be', name: '베릴륨' },
+                { number: 5, symbol: 'B', name: '붕소' }, { number: 6, symbol: 'C', name: '탄소' },
+                { number: 7, symbol: 'N', name: '질소' }, { number: 8, symbol: 'O', name: '산소' },
+                { number: 9, symbol: 'F', name: '플루오린' }, { number: 10, symbol: 'Ne', name: '네온' },
+                { number: 11, symbol: 'Na', name: '나트륨' }, { number: 12, symbol: 'Mg', name: '마그네슘' },
+                { number: 13, symbol: 'Al', name: '알루미늄' }, { number: 14, symbol: 'Si', name: '규소' },
+                { number: 15, symbol: 'P', name: '인' }, { number: 16, symbol: 'S', name: '황' },
+                { number: 17, symbol: 'Cl', name: '염소' }, { number: 18, symbol: 'Ar', name: '아르곤' },
+                { number: 19, symbol: 'K', name: '칼륨' }, { number: 20, symbol: 'Ca', name: '칼슘' },
+                { number: 21, symbol: 'Sc', name: '스칸듐' }, { number: 22, symbol: 'Ti', name: '타이타늄' },
+                { number: 23, symbol: 'V', name: '바나듐' }, { number: 24, symbol: 'Cr', name: '크로뮴' },
+                { number: 25, symbol: 'Mn', name: '망가니즈' }, { number: 26, symbol: 'Fe', name: '철' },
+                { number: 27, symbol: 'Co', name: '코발트' }, { number: 28, symbol: 'Ni', name: '니켈' },
+                { number: 29, symbol: 'Cu', name: '구리' }, { number: 30, symbol: 'Zn', name: '아연' },
+                { number: 31, symbol: 'Ga', name: '갈륨' }, { number: 32, symbol: 'Ge', name: '저마늄' },
+                { number: 33, symbol: 'As', name: '비소' }, { number: 34, symbol: 'Se', name: '셀레늄' },
+                { number: 35, symbol: 'Br', name: '브로민' }, { number: 36, symbol: 'Kr', name: '크립톤' },
+                { number: 37, symbol: 'Rb', name: '루비듐' }, { number: 38, symbol: 'Sr', name: '스트론튬' },
+                { number: 39, symbol: 'Y', name: '이트륨' }, { number: 40, symbol: 'Zr', name: '지르코늄' },
+                { number: 41, symbol: 'Nb', name: '나이오븀' }, { number: 42, symbol: 'Mo', name: '몰리브데넘' },
+                { number: 43, symbol: 'Tc', name: '테크네튬' }, { number: 44, symbol: 'Ru', name: '루테늄' },
+                { number: 45, symbol: 'Rh', name: '로듐' }, { number: 46, symbol: 'Pd', name: '팔라듐' },
+                { number: 47, symbol: 'Ag', name: '은' }, { number: 48, symbol: 'Cd', name: '카드뮴' },
+                { number: 49, symbol: 'In', name: '인듐' }, { number: 50, symbol: 'Sn', name: '주석' },
+                { number: 51, symbol: 'Sb', name: '안티모니' }, { number: 52, symbol: 'Te', name: '텔루륨' },
+                { number: 53, symbol: 'I', name: '아이오딘' }, { number: 54, symbol: 'Xe', name: '제논' },
+                { number: 55, symbol: 'Cs', name: '세슘' }, { number: 56, symbol: 'Ba', name: '바륨' },
+                { number: 57, symbol: 'La', name: '란타넘' }, { number: 58, symbol: 'Ce', name: '세륨' },
+                { number: 59, symbol: 'Pr', name: '프라세오디뮴' }, { number: 60, symbol: 'Nd', name: '네오디뮴' },
+                { number: 61, symbol: 'Pm', name: '프로메튬' }, { number: 62, symbol: 'Sm', name: '사마륨' },
+                { number: 63, symbol: 'Eu', name: '유로퓸' }, { number: 64, symbol: 'Gd', name: '가돌리늄' },
+                { number: 65, symbol: 'Tb', name: '터븀' }, { number: 66, symbol: 'Dy', name: '디스프로슘' },
+                { number: 67, symbol: 'Ho', name: '홀뮴' }, { number: 68, symbol: 'Er', name: '어븀' },
+                { number: 69, symbol: 'Tm', name: '툴륨' }, { number: 70, symbol: 'Yb', name: '이터븀' },
+                { number: 71, symbol: 'Lu', name: '루테튬' }, { number: 72, symbol: 'Hf', name: '하프늄' },
+                { number: 73, symbol: 'Ta', name: '탄탈럼' }, { number: 74, symbol: 'W', name: '텅스텐' },
+                { number: 75, symbol: 'Re', name: '레늄' }, { number: 76, symbol: 'Os', name: '오스뮴' },
+                { number: 77, symbol: 'Ir', name: '이리듐' }, { number: 78, symbol: 'Pt', name: '백금' },
+                { number: 79, symbol: 'Au', name: '금' }, { number: 80, symbol: 'Hg', name: '수은' },
+                { number: 81, symbol: 'Tl', name: '탈륨' }, { number: 82, symbol: 'Pb', name: '납' },
+                { number: 83, symbol: 'Bi', name: '비스무트' }, { number: 84, symbol: 'Po', name: '폴로늄' },
+                { number: 85, symbol: 'At', name: '아스타틴' }, { number: 86, symbol: 'Rn', name: '라돈' },
+                { number: 87, symbol: 'Fr', name: '프랑슘' }, { number: 88, symbol: 'Ra', name: '라듐' },
+                { number: 89, symbol: 'Ac', name: '악티늄' }, { number: 90, symbol: 'Th', name: '토륨' },
+                { number: 91, symbol: 'Pa', name: '프로트악티늄' }, { number: 92, symbol: 'U', name: '우라늄' },
+                { number: 93, symbol: 'Np', name: '넵투늄' }, { number: 94, symbol: 'Pu', name: '플루토늄' },
+                { number: 95, symbol: 'Am', name: '아메리슘' }, { number: 96, symbol: 'Cm', name: '퀴륨' },
+                { number: 97, symbol: 'Bk', name: '버클륨' }, { number: 98, symbol: 'Cf', name: '캘리포늄' },
+                { number: 99, symbol: 'Es', name: '아인슈타이늄' }, { number: 100, symbol: 'Fm', name: '페르뮴' },
+                { number: 101, symbol: 'Md', name: '멘델레븀' }, { number: 102, symbol: 'No', name: '노벨륨' },
+                { number: 103, symbol: 'Lr', name: '로렌슘' }, { number: 104, symbol: 'Rf', name: '러더포듐' },
+                { number: 105, symbol: 'Db', name: '더브늄' }, { number: 106, symbol: 'Sg', name: '시보귬' },
+                { number: 107, symbol: 'Bh', name: '보륨' }, { number: 108, symbol: 'Hs', name: '하슘' },
+                { number: 109, symbol: 'Mt', name: '마이트너륨' }, { number: 110, symbol: 'Ds', name: '다름슈타튬' },
+                { number: 111, symbol: 'Rg', name: '뢴트게늄' }, { number: 112, symbol: 'Cn', name: '코페르니슘' },
+                { number: 113, symbol: 'Nh', name: '니호늄' }, { number: 114, symbol: 'Fl', name: '플레로븀' },
+                { number: 115, 'symbol': 'Mc', name: '모스코븀' }, { number: 116, symbol: 'Lv', name: '리버모륨' },
+                { number: 117, symbol: 'Ts', name: '테네신' }, { number: 118, symbol: 'Og', name: '오가네손' }
+            ];
+
+            const DICE_TYPES = [4, 6, 8, 10, 12, 20, 100];
+            const diceSelector = document.getElementById('dice-selector');
+            const rollButton = document.getElementById('roll-button');
+            const operatorToggle = document.getElementById('operator-toggle');
+            const comboToggle = document.getElementById('combo-toggle');
+            const diceRollResultsContainer = document.getElementById('dice-roll-results');
+            const calcTableBody = document.querySelector('#calculation-results-table tbody');
+            const calcInfo = document.getElementById('calculation-info');
+
+            // 주사위 선택 UI 생성
+            DICE_TYPES.forEach(sides => {
+                const id = `d${sides}`;
+                const container = document.createElement('div');
+                container.innerHTML = `
+                    <input type="checkbox" id="${id}" value="${sides}" class="dice-checkbox hidden">
+                    <label for="${id}" class="flex flex-col items-center justify-center w-full h-24 p-2 bg-gray-700/80 rounded-lg cursor-pointer border-2 border-transparent transition-all duration-300 ease-in-out hover:bg-gray-600/80 hover:border-blue-500">
+                        <span class="text-3xl dice-icon transition-transform duration-300 ease-in-out">
+                            ${getDiceIcon(sides)}
+                        </span>
+                        <span class="font-bold font-orbitron">d${sides}</span>
+                    </label>
+                `;
+                diceSelector.appendChild(container);
+            });
+
+            function getDiceIcon(sides) {
+                switch(sides) {
+                    case 4: return '◭'; case 6: return '🎲'; case 8: return '⬟';
+                    case 10: return '◆'; case 12: return '⬢'; case 20: return '⬡';
+                    case 100: return '%'; default: return '?';
+                }
+            }
+            
+            class Dice {
+                constructor(sides) { this.sides = sides; }
+                roll() { return Math.floor(Math.random() * this.sides) + 1; }
+            }
+
+            rollButton.addEventListener('click', () => {
+                const selectedDiceCheckboxes = document.querySelectorAll('.dice-checkbox:checked');
+                if (selectedDiceCheckboxes.length === 0) {
+                    const tempMsg = document.createElement('p');
+                    tempMsg.className = 'text-yellow-400';
+                    tempMsg.textContent = '하나 이상의 주사위를 선택해주세요.';
+                    diceRollResultsContainer.innerHTML = '';
+                    diceRollResultsContainer.appendChild(tempMsg);
+                    setTimeout(() => { if(diceRollResultsContainer.contains(tempMsg)) diceRollResultsContainer.innerHTML = '<p class="text-gray-400">주사위를 선택하고 \'Roll Dice!\' 버튼을 누르세요.</p>'; }, 2000);
+                    return;
+                }
+
+                rollButton.disabled = true;
+                rollButton.textContent = 'Rolling...';
+                diceRollResultsContainer.innerHTML = '';
+                calcTableBody.innerHTML = '<tr><td colspan="4" class="text-center p-8 text-gray-400">계산 중...</td></tr>';
+                calcInfo.innerHTML = '';
+
+                const diceToRoll = Array.from(selectedDiceCheckboxes).map(cb => new Dice(parseInt(cb.value)));
+                const rollResults = [];
+                let animationCompleted = 0;
+
+                diceToRoll.forEach(dice => {
+                    const resultDiv = document.createElement('div');
+                    resultDiv.className = 'flex flex-col items-center justify-center bg-gray-900/70 w-24 h-24 rounded-lg p-2 shadow-inner';
+                    resultDiv.innerHTML = `<div class="font-orbitron text-gray-400">d${dice.sides}</div><div class="text-4xl font-bold">?</div>`;
+                    diceRollResultsContainer.appendChild(resultDiv);
+
+                    const valueEl = resultDiv.querySelector('.text-4xl');
+                    const animationInterval = setInterval(() => { valueEl.textContent = dice.roll(); }, 100);
+
+                    setTimeout(() => {
+                        clearInterval(animationInterval);
+                        const finalValue = dice.roll();
+                        rollResults.push(finalValue);
+                        valueEl.textContent = finalValue;
+                        valueEl.classList.add('text-blue-400', 'scale-125');
+                        
+                        animationCompleted++;
+                        if (animationCompleted === diceToRoll.length) {
+                            processCalculations(rollResults);
+                            rollButton.disabled = false;
+                            rollButton.textContent = 'Roll Dice!';
+                        }
+                    }, 1500 + Math.random() * 500);
+                });
+            });
+            
+            // 계산 처리 함수
+            function processCalculations(numbers) {
+                if (numbers.length < 1) return;
+
+                const useAdvancedOps = operatorToggle.checked;
+                const useThreeCombos = comboToggle.checked;
+                const operators = useAdvancedOps ? ['+', '-', '*', '/'] : ['+', '-'];
+                let allResults = new Map();
+
+                const maxCombo = useThreeCombos ? 3 : 2;
+                
+                const combinations = [];
+                for (let k = 1; k <= Math.min(numbers.length, maxCombo); k++) {
+                    combinations.push(...getCombinations(numbers, k));
+                }
+
+                const infoText = `굴려진 주사위 결과값들의 모든 1~${maxCombo}개 조합에 대해 계산합니다.`;
+                calcInfo.innerHTML = `<p class="text-sm text-yellow-300 mb-3 p-3 bg-yellow-900/50 rounded-md border border-yellow-700/50">ℹ️ <strong>계산 안내:</strong> ${infoText}</p>`;
+
+                combinations.forEach(combo => {
+                    const numberPermutations = getPermutations(combo);
+                    numberPermutations.forEach(numPerm => {
+                        generateExpressionResults(numPerm, operators, allResults);
+                    });
+                });
+
+                const sortedResults = Array.from(allResults.values())
+                    .filter(r => Number.isInteger(r.value) && r.value > 0 && r.value <= 118)
+                    .sort((a, b) => a.value - b.value);
+
+                renderResults(sortedResults);
+            }
+            
+            function generateExpressionResults(numbers, operators, resultsMap, currentExpr = '', index = 0) {
+                currentExpr += numbers[index];
+
+                if (index === numbers.length - 1) {
+                    try {
+                        const value = evaluateExpression(currentExpr);
+                        if (!resultsMap.has(value)) {
+                           resultsMap.set(value, { expression: currentExpr, value: value });
+                        }
+                    } catch (e) { /* 0으로 나누기 등 오류 무시 */ }
+                    return;
+                }
+
+                operators.forEach(op => {
+                    generateExpressionResults(numbers, operators, resultsMap, `${currentExpr} ${op} `, index + 1);
+                });
+            }
+            
+            // 좌->우 순서로 사칙연산 계산 (괄호 없음)
+            function evaluateExpression(expr) {
+                const tokens = expr.split(' ');
+                let value = parseFloat(tokens[0]);
+                for (let i = 1; i < tokens.length; i += 2) {
+                    const operator = tokens[i];
+                    const nextValue = parseFloat(tokens[i + 1]);
+                    switch (operator) {
+                        case '+': value += nextValue; break;
+                        case '-': value -= nextValue; break;
+                        case '*': value *= nextValue; break;
+                        case '/': 
+                            if (nextValue === 0) throw new Error('Division by zero');
+                            value = Math.floor(value / nextValue); // 몫만 취함
+                            break;
+                    }
+                }
+                return value;
+            }
+
+            function renderResults(results) {
+                calcTableBody.innerHTML = '';
+                if (results.length === 0) {
+                    calcTableBody.innerHTML = '<tr><td colspan="4" class="text-center p-8 text-gray-400">계산 결과 중 원소 번호에 해당하는 값이 없습니다.</td></tr>';
+                    return;
+                }
+
+                results.forEach(res => {
+                    const element = ELEMENTS.find(e => e.number === res.value);
+                    if (element) {
+                        const row = document.createElement('tr');
+                        row.className = 'border-b border-gray-700/50 hover:bg-gray-700/70 transition-colors duration-200';
+                        row.innerHTML = `
+                            <td class="p-2 font-mono">${res.expression}</td>
+                            <td class="p-2 text-center font-bold text-blue-300">${res.value}</td>
+                            <td class="p-2 text-center font-bold font-orbitron text-lg">${element.symbol}</td>
+                            <td class="p-2">${element.name}</td>
+                        `;
+                        calcTableBody.appendChild(row);
+                    }
+                });
+            }
+            
+            function getPermutations(arr) {
+                if (arr.length === 0) return [[]];
+                const firstEl = arr[0];
+                const rest = arr.slice(1);
+                const permsWithoutFirst = getPermutations(rest);
+                const allPermutations = [];
+                permsWithoutFirst.forEach(perm => {
+                    for (let i = 0; i <= perm.length; i++) {
+                        const permWithFirst = [...perm.slice(0, i), firstEl, ...perm.slice(i)];
+                        allPermutations.push(permWithFirst);
+                    }
+                });
+                return allPermutations;
+            }
+
+            function getCombinations(array, k) {
+                const result = [];
+                function comb(startIndex, currentComb) {
+                    if (currentComb.length === k) {
+                        result.push([...currentComb]);
+                        return;
+                    }
+                    if (startIndex >= array.length) return;
+                    
+                    currentComb.push(array[startIndex]);
+                    comb(startIndex + 1, currentComb);
+                    currentComb.pop();
+                    comb(startIndex + 1, currentComb);
+                }
+                comb(0, []);
+                return result;
+            }
+        });
+    </script>
+</body>
+</html>
